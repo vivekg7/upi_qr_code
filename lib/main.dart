@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:upi_qr_code/screens/qr_page.dart';
 
 void main() {
+  WidgetsFlutterBinding.ensureInitialized();
   SystemChrome.setPreferredOrientations([DeviceOrientation.portraitUp]);
 
   runApp(const MyApp());

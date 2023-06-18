@@ -45,6 +45,7 @@ class _UserDetailsPageState extends State<UserDetailsPage> {
             TextField(
               controller: nameController,
               decoration: const InputDecoration(
+                prefixIcon: Icon(Icons.person),
                 border: OutlineInputBorder(),
                 labelText: 'Name',
                 hintText: 'Enter Name',

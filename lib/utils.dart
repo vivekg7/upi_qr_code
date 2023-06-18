@@ -24,3 +24,8 @@ Future<void> setUser(User user) async {
 const smallGap = SizedBox(height: 10);
 const gap = SizedBox(height: 20);
 const largeGap = SizedBox(height: 30);
+
+String clipText(String text, {int size = 10}) {
+  if (text.length <= size) return text;
+  return '${text.substring(0, size)}...';
+}

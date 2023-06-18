@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:qr_flutter/qr_flutter.dart';
+import 'package:share_plus/share_plus.dart';
 import 'package:upi_qr_code/models/user.dart';
 import 'package:upi_qr_code/screens/user_details_page.dart';
 import 'package:upi_qr_code/utils.dart';
@@ -58,6 +59,7 @@ class _QRPageState extends State<QRPage> {
         controller: amntController,
         keyboardType: TextInputType.number,
         decoration: const InputDecoration(
+          prefixIcon: Icon(Icons.currency_rupee),
           border: OutlineInputBorder(),
           labelText: 'Amount',
           hintText: 'Enter Amount',
@@ -89,7 +91,40 @@ class _QRPageState extends State<QRPage> {
   List<Widget> qrCode() {
     return [
       QrImageView(data: qrData),
-      gap,
+      ListTile(
+        title: Text.rich(TextSpan(
+          text: 'Amount: ',
+          children: [
+            TextSpan(
+              text: '₹${amntController.text}',
+              style: const TextStyle(
+                fontWeight: FontWeight.bold,
+                overflow: TextOverflow.fade,
+              ),
+            ),
+          ],
+        )),
+        subtitle: Text.rich(TextSpan(
+          text: 'Notes: ',
+          children: [
+            TextSpan(
+              text: clipText(descController.text, size: 20),
+              style: const TextStyle(
+                fontWeight: FontWeight.bold,
+                overflow: TextOverflow.fade,
+              ),
+            ),
+          ],
+        )),
+        trailing: IconButton(
+          icon: const Icon(Icons.edit),
+          onPressed: () {
+            setState(() {
+              pageState = 0;
+            });
+          },
+        ),
+      ),
       const Center(
         child: Text('Scan and pay with any BHIM UPI app'),
       ),
@@ -106,11 +141,21 @@ class _QRPageState extends State<QRPage> {
     return ListTile(
       title: Text(user?.name ?? ''),
       subtitle: Text(user?.upiId ?? ''),
-      trailing: IconButton(
-        icon: const Icon(Icons.edit),
-        onPressed: goToUserDetailsPage,
-      ),
+      trailing: pageState == 0
+          ? IconButton(
+              icon: const Icon(Icons.edit),
+              onPressed: goToUserDetailsPage,
+            )
+          : IconButton(
+              icon: const Icon(Icons.share),
+              onPressed: shareUPIPayment,
+            ),
     );
+  }
+
+  void shareUPIPayment() {
+    Share.share('Pay ₹${amntController.text}/- to ${user?.name}\n'
+        '${qrData.replaceAll(" ", "%20")}');
   }
 
   @override

@@ -8,7 +8,7 @@ class AppTitle extends StatelessWidget {
     return const Center(
       child: Text(
         'UPI QR Code',
-        textScaleFactor: 1.3,
+        textScaleFactor: 1.4,
         style: TextStyle(fontWeight: FontWeight.bold),
       ),
     );
