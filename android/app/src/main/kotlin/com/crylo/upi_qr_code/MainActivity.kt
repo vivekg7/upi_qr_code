@@ -1,4 +1,4 @@
-package com.example.upi_qr_code
+package com.crylo.upi_qr_code
 
 import io.flutter.embedding.android.FlutterActivity
 
