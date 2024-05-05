@@ -16,7 +16,8 @@ class QRPage extends StatefulWidget {
 }
 
 class _QRPageState extends State<QRPage> {
-  User? user;
+  List<User> users = [];
+  User? selectedUser;
   TextEditingController amntController = TextEditingController();
   TextEditingController descController = TextEditingController(text: '');
   int pageState = 0;
@@ -25,15 +26,34 @@ class _QRPageState extends State<QRPage> {
   @override
   void initState() {
     super.initState();
-    getUser().then((userResult) {
-      if (userResult == null) {
-        goToUserDetailsPage();
+    getUserList().then((userList) {
+      if (userList.isEmpty) {
+        migrateOldUser().then((_) {
+          goToUserDetailsPage();
+        });
       } else {
-        setState(() {
-          user = userResult;
+        getDefaultUser().then((defaultUserId) {
+          User defaultUser = userList[0];
+          if (defaultUserId != null && defaultUserId.isNotEmpty) {
+            for (User u in userList) {
+              if (u.upiId == defaultUserId) {
+                defaultUser = u;
+                break;
+              }
+            }
+          }
+          setState(() {
+            users = userList;
+            selectedUser = defaultUser;
+          });
         });
       }
     });
+  }
+
+  String generateQrData() {
+    return 'upi://pay?pa=${selectedUser?.upiId}&pn=${selectedUser?.name}'
+        '&am=${amntController.text}&tn=${descController.text}&cu=INR';
   }
 
   void goToUserDetailsPage() {
@@ -41,12 +61,24 @@ class _QRPageState extends State<QRPage> {
       context,
       MaterialPageRoute(builder: (context) => const UserDetailsPage()),
     ).then((_) {
-      getUser().then((userResult) {
-        if (userResult == null) {
+      getUserList().then((userList) {
+        if (userList.isEmpty) {
           SystemChannels.platform.invokeMethod('SystemNavigator.pop');
         } else {
-          setState(() {
-            user = userResult;
+          getDefaultUser().then((defaultUserId) {
+            User defaultUser = userList[0];
+            if (defaultUserId != null && defaultUserId.isNotEmpty) {
+              for (User u in userList) {
+                if (u.upiId == defaultUserId) {
+                  defaultUser = u;
+                  break;
+                }
+              }
+            }
+            setState(() {
+              users = userList;
+              selectedUser = defaultUser;
+            });
           });
         }
       });
@@ -79,8 +111,7 @@ class _QRPageState extends State<QRPage> {
         onPressed: () {
           setState(() {
             pageState = 1;
-            qrData = 'upi://pay?pa=${user?.upiId}&pn=${user?.name}'
-                '&am=${amntController.text}&tn=${descController.text}&cu=INR';
+            qrData = generateQrData();
           });
         },
         child: const Text('Generate QR Code'),
@@ -148,22 +179,29 @@ class _QRPageState extends State<QRPage> {
 
   Widget userWidget() {
     return ListTile(
-      title: Text(user?.name ?? ''),
-      subtitle: Text(user?.upiId ?? ''),
+      title: Text(
+        selectedUser?.name ?? '',
+      ),
+      subtitle: Text(
+        selectedUser?.upiId ?? '',
+      ),
+      dense: true,
       trailing: pageState == 0
           ? IconButton(
               icon: const Icon(Icons.edit),
               onPressed: goToUserDetailsPage,
+              visualDensity: VisualDensity.compact,
             )
           : IconButton(
               icon: const Icon(Icons.share),
               onPressed: shareUPIPayment,
+              visualDensity: VisualDensity.compact,
             ),
     );
   }
 
   void shareUPIPayment() {
-    Share.share('Pay ₹${amntController.text}/- to ${user?.name}\n'
+    Share.share('Pay ₹${amntController.text}/- to ${selectedUser?.name}\n'
         '${qrData.replaceAll(" ", "%20")}');
   }
 

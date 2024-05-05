@@ -11,17 +11,40 @@ class UserDetailsPage extends StatefulWidget {
 }
 
 class _UserDetailsPageState extends State<UserDetailsPage> {
+  List<User> users = [];
+  int selectedIdx = 0;
+  bool canAddAccount = true;
   TextEditingController nameController = TextEditingController(text: '');
   TextEditingController upiIdController = TextEditingController(text: '');
 
   @override
   void initState() {
     super.initState();
-    getUser().then((user) {
-      if (user != null) {
-        nameController.text = user.name;
-        upiIdController.text = user.upiId;
+    getUserList().then((userList) {
+      if (userList.isEmpty) {
+        return;
       }
+      for (User u in userList) {
+        if (u.upiId.isEmpty) {
+          setState(() {
+            canAddAccount = false;
+          });
+        }
+      }
+      setState(() {
+        users = userList;
+      });
+      getDefaultUser().then((defaultUserId) {
+        if (defaultUserId != null && defaultUserId.isNotEmpty) {
+          int newIdx = userList.indexWhere((u) => u.upiId == defaultUserId);
+          if (newIdx > 0) {
+            setState(() {
+              selectedIdx = newIdx;
+            });
+          }
+        }
+        onChangeSelectedIdx();
+      });
     });
   }
 
@@ -30,6 +53,78 @@ class _UserDetailsPageState extends State<UserDetailsPage> {
     nameController.dispose();
     upiIdController.dispose();
     super.dispose();
+  }
+
+  void promptDeleteUser(User u) {
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: const Text('Delete User'),
+          content: const Text('are you sure you want to delete?'),
+          actions: [
+            FilledButton(
+              style: ButtonStyle(
+                backgroundColor:
+                    const MaterialStatePropertyAll(Colors.transparent),
+                foregroundColor: MaterialStatePropertyAll(
+                    Theme.of(context).colorScheme.primary),
+              ),
+              onPressed: () {
+                Navigator.of(context).pop();
+              },
+              child: const Text('No'),
+            ),
+            FilledButton(
+              onPressed: () {
+                setState(() {
+                  users.remove(u);
+                  if (selectedIdx > 0) {
+                    selectedIdx--;
+                  }
+                });
+                onSaveUsers();
+                Navigator.of(context).pop();
+              },
+              child: const Text('Yes'),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  void onChangeSelectedIdx({int? newIdx}) {
+    setState(() {
+      if (newIdx != null) {
+        selectedIdx = users.length > newIdx ? newIdx : 0;
+      }
+      if (users.length > selectedIdx) {
+        nameController.text = users[selectedIdx].name;
+        upiIdController.text = users[selectedIdx].upiId;
+      } else {
+        nameController.text = '';
+        upiIdController.text = '';
+      }
+    });
+  }
+
+  Future<void> onSaveUsers() async {
+    setState(() {
+      if (users.isNotEmpty && users[0].upiId.isEmpty) {
+        users.removeAt(0);
+        if (selectedIdx > 0) {
+          selectedIdx--;
+        }
+      }
+      users.removeWhere((u) => u.upiId.isEmpty);
+      if (users.length <= selectedIdx) {
+        selectedIdx = 0;
+      }
+    });
+    await setUserList(users);
+    await setDefaultUser(
+        users.length > selectedIdx ? users[selectedIdx].upiId : '');
   }
 
   @override
@@ -67,10 +162,58 @@ class _UserDetailsPageState extends State<UserDetailsPage> {
                   name: nameController.text,
                   upiId: upiIdController.text,
                 );
-                setUser(user).then((_) => Navigator.pop(context));
+                if (users.isNotEmpty) {
+                  users[selectedIdx] = user;
+                } else {
+                  users.add(user);
+                }
+                onSaveUsers().then((_) => Navigator.pop(context));
               },
               child: const Text('Save Account Data'),
             ),
+            // largeGap,
+            if (canAddAccount)
+              FilledButton(
+                onPressed: () {
+                  setState(() {
+                    users.insert(0, User(name: '', upiId: ''));
+                    canAddAccount = false;
+                  });
+                  onChangeSelectedIdx(newIdx: 0);
+                },
+                style: ButtonStyle(
+                  backgroundColor:
+                      const MaterialStatePropertyAll(Colors.transparent),
+                  foregroundColor: MaterialStatePropertyAll(
+                      Theme.of(context).colorScheme.primary),
+                ),
+                child: const Text('Add New Account'),
+              ),
+            ...users.map((u) {
+              return ListTile(
+                onTap: () {
+                  onChangeSelectedIdx(newIdx: users.indexOf(u));
+                },
+                onLongPress: () {
+                  onChangeSelectedIdx(newIdx: users.indexOf(u));
+                  onSaveUsers().then((_) => Navigator.pop(context));
+                },
+                title: Text(
+                  u.name.isEmpty ? '--' : u.name,
+                ),
+                subtitle: Text(
+                  u.upiId.isEmpty ? '--' : u.upiId,
+                ),
+                dense: true,
+                selected: u.upiId == users[selectedIdx].upiId,
+                trailing: IconButton(
+                  onPressed: () {
+                    promptDeleteUser(u);
+                  },
+                  icon: const Icon(Icons.delete_outline),
+                ),
+              );
+            }),
           ],
         ),
       ),
