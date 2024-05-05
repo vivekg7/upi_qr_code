@@ -85,6 +85,15 @@ class _QRPageState extends State<QRPage> {
         },
         child: const Text('Generate QR Code'),
       ),
+      gap,
+      TextButton(
+        child: const Text('Share this App'),
+        onPressed: () {
+          Share.share('Please checkout "UPI QR Code Generator"'
+              ' App on Google Play Store '
+              'https://play.google.com/store/apps/details?id=com.crylo.upi_qr_code');
+        },
+      ),
     ];
   }
 
